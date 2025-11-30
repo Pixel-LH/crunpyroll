@@ -93,6 +93,9 @@ class Episode(Content):
         series_slug (``str``):
             Slug of the series of this episode.
 
+        series_title (``str``):
+            Title of the series of this episode.
+
         subtitle_locales (List of ``str``):
             List containing language codes of available subtitles.
 
@@ -157,6 +160,7 @@ class Episode(Content):
         self.season_slug: str = data.get("season_slug_title")
         self.series_id: str = data.get("series_id")
         self.series_slug: str = data.get("series_slug_title")
+        self.series_title: str = data.get("series_title")
         self.subtitle_locales: List[str] = data.get("subtitle_locales")
         self.audio_locales: str = data.get("audio_locale")
         self.maturity_ratings: List[str] = data.get("maturity_ratings")
