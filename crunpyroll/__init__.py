@@ -2,7 +2,7 @@
 Crunpyroll - Async API wrapper for Crunchyroll
 """
 
-__version__ = "2.4.9"
+__version__ = "2.5.0"
 __author__ = "stefanodvx"
 __email__ = "pp.stefanodvx@gmail.com"
 

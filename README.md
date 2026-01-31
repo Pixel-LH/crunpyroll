@@ -23,6 +23,8 @@ pip install -U git+https://github.com/Pixel-LH/crunpyroll
 pip install -U crunpyroll
 ```
 
+If you see a distutils-related error when installing from Git, see [DOCKER_INSTALL_SOLUTIONS.md](DOCKER_INSTALL_SOLUTIONS.md) (Solution 2) or use `pip install --no-build-isolation git+https://github.com/Pixel-LH/crunpyroll.git` after installing setuptools and wheel.
+
 ---
 
 #### Documentation 📄

@@ -1,17 +1,31 @@
-# Docker Installation Solutions for crunpyroll
+# Installation Solutions for crunpyroll (Docker and local environments)
 
-This document provides multiple solutions for installing the crunpyroll package in Docker environments where you might encounter setuptools/distutils compatibility issues.
+This document provides solutions for installing the crunpyroll package when you encounter setuptools/distutils compatibility issues—in **Docker** or in **local environments** (e.g. macOS, venv).
+
+With the current build system (hatchling), a normal `pip install git+https://github.com/Pixel-LH/crunpyroll.git` should work. Use the steps below if you still see distutils-related errors (e.g. when using an older workflow or a custom setup).
 
 ## 🐳 Problem Description
 
-When installing crunpyroll in Docker containers with Python 3.11, you might encounter:
+When installing crunpyroll from Git, you might see an error like:
 ```
 AssertionError: /usr/local/lib/python3.11/distutils/core.py
 ```
+or (on macOS):
+```
+AssertionError: /Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/distutils/core.py
+```
 
-This error occurs due to setuptools/distutils compatibility issues in containerized environments.
+This can occur in **Docker containers** (e.g. with Python 3.11) or in **local environments** (macOS with Framework Python, venv) due to setuptools/distutils compatibility issues in pip’s isolated build environment.
 
 ## 🔧 Solutions
+
+### Local install (macOS / venv) with distutils error
+
+If you see the same `AssertionError: .../distutils/core.py` on **local macOS** or inside a **venv**, use the same steps as **Solution 2** below: upgrade pip, install setuptools and wheel, then run:
+
+```bash
+pip install --no-build-isolation git+https://github.com/Pixel-LH/crunpyroll.git
+```
 
 ### Solution 1: Automated Installation Script (Recommended)
 

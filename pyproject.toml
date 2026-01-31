@@ -1,9 +1,6 @@
 [build-system]
-requires = [
-    "setuptools>=61.0,<70.0",
-    "wheel>=0.37.0"
-]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
 
 [project]
 name = "crunpyroll"
@@ -63,15 +60,11 @@ Repository = "https://github.com/Pixel-LH/crunpyroll.git"
 Documentation = "https://crunpyroll.readthedocs.io/"
 "Bug Tracker" = "https://github.com/Pixel-LH/crunpyroll/issues"
 
-[tool.setuptools]
-packages = {find = {where = ["."], include = ["crunpyroll*"], exclude = ["test*", "docs*"]}}
-include-package-data = true
+[tool.hatch.version]
+path = "crunpyroll/__init__.py"
 
-[tool.setuptools.dynamic]
-version = {attr = "crunpyroll.__version__"}
-
-[tool.setuptools.package-data]
-crunpyroll = ["py.typed"]
+[tool.hatch.build.targets.wheel]
+packages = ["crunpyroll"]
 
 [tool.black]
 line-length = 88
