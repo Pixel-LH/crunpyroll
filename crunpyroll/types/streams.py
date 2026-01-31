@@ -39,13 +39,15 @@ class MediaStreams(Object):
     def parse(cls, obj: Dict, media_id: str):
         data = {}
         data.update(obj)
+        subtitles_raw = obj.get("subtitles")
         data["subtitles"] = [
             SubtitlesStream(subtitle) for
-            subtitle in obj.get("subtitles").values()
+            subtitle in (subtitles_raw.values() if isinstance(subtitles_raw, dict) else [])
         ]
+        hardsubs_raw = obj.get("hardSubs")
         data["hardsub"] = [
             HardsubStream(video) for
-            video in obj.get("hardSubs").values()
+            video in (hardsubs_raw.values() if isinstance(hardsubs_raw, dict) else [])
         ]
         data["media_id"] = media_id
         return cls(data)

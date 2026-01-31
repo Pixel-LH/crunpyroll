@@ -15,3 +15,10 @@ from .objects import ObjectsQuery
 from .index import SessionIndex
 from .manifest import Manifest, ManifestVideoStream, ManifestAudioStream
 from .drm import DRM, ContentProtection
+from .skip_events import (
+    SkipEvent,
+    SkipEvents,
+    Chapter,
+    build_chapter_list,
+    DEFAULT_CHAPTER_GAP_MS,
+)

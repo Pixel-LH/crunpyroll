@@ -72,6 +72,8 @@ if "__main__" == __name__:
             "get_profile",
             "get_index",
             "get_streams",
+            "get_streams_phone",
+            "get_skip_events",
             "get_license",
             "get_manifest"
         ]
@@ -96,6 +98,9 @@ if "__main__" == __name__:
             "MediaStreams",
             "SubtitlesStream",
             "HardsubStream",
+            "SkipEvent",
+            "SkipEvents",
+            "Chapter",
             "Manifest",
             "ManifestVideoStream",
             "ManifestAudioStream",

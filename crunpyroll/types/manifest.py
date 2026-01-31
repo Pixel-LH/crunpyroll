@@ -11,9 +11,16 @@ from ..utils import (
     parse_segments
 )
 
-from typing import List, Dict
+from typing import List, Dict, Any
 
 import xmltodict
+
+
+def _as_list(x: Any) -> list:
+    """Normalize xmltodict single element (dict) or multiple (list) to a list."""
+    if x is None:
+        return []
+    return x if isinstance(x, list) else [x]
 
 
 class Manifest(Object):
@@ -39,9 +46,9 @@ class Manifest(Object):
     """
 
     def __init__(self, data: Dict):
-        self.video_streams: List["ManifestVideoStream"] = data.get("video_streams")
-        self.audio_streams: List["ManifestAudioStream"] = data.get("audio_streams")
-        self.sub_streams: List["SubtitlesStream"] = data.get("subs_streams")
+        self.video_streams: List["ManifestVideoStream"] = data.get("video_streams") or []
+        self.audio_streams: List["ManifestAudioStream"] = data.get("audio_streams") or []
+        self.sub_streams: List["SubtitlesStream"] = data.get("subs_streams") or []
         self.content_protection: "ContentProtection" = ContentProtection(data.get("content_protection"))
         self.plain: str = data.get("plain")
 
@@ -54,11 +61,16 @@ class Manifest(Object):
         data["subs_streams"] = []
         data["content_protection"] = {}
         manifest = xmltodict.parse(obj)
-        for aset in manifest["MPD"]["Period"]["AdaptationSet"]:
+        period = manifest.get("MPD", {}).get("Period") or {}
+        for aset in _as_list(period.get("AdaptationSet")):
+            if not isinstance(aset, dict):
+                continue
             if "SegmentTemplate" in aset:
                 template = aset["SegmentTemplate"]
-                for drm in aset["ContentProtection"]:
-                    scheme_id_uri = drm["@schemeIdUri"]
+                for drm in _as_list(aset.get("ContentProtection")):
+                    if not isinstance(drm, dict):
+                        continue
+                    scheme_id_uri = drm.get("@schemeIdUri")
                     if scheme_id_uri == WIDEVINE_UUID:
                         data["content_protection"]["widevine"] = {}
                         data["content_protection"]["widevine"]["pssh"] = drm["cenc:pssh"]
@@ -70,22 +82,23 @@ class Manifest(Object):
                         data["content_protection"]["playready"] = {}
                         data["content_protection"]["playready"]["pssh"] = drm["mspr:pro"]
 
-                    mime_type = aset.get("@mimeType") or aset.get("@mime_Type") or aset.get("@mime_type")
-                    representation = aset["Representation"]
+                mime_type = aset.get("@mimeType") or aset.get("@mime_Type") or aset.get("@mime_type") or ""
+                for repr in _as_list(aset.get("Representation")):
+                    if not isinstance(repr, dict):
+                        continue
                     if "video" in mime_type:
-                        for repr in representation:
-                            stream = ManifestVideoStream.parse(repr, template)
-                            data["video_streams"].append(stream)
+                        stream = ManifestVideoStream.parse(repr, template)
+                        data["video_streams"].append(stream)
                     elif "audio" in mime_type:
-                        for repr in representation:
-                            stream = ManifestAudioStream.parse(repr, template)
-                            data["audio_streams"].append(stream)
+                        stream = ManifestAudioStream.parse(repr, template)
+                        data["audio_streams"].append(stream)
             else:
-                mimeType = aset.get("@mimeType")
+                mimeType = aset.get("@mimeType") or ""
                 if mimeType.startswith("text/vtt"):
-                    repr = aset["Representation"]
-                    stream = SubtitlesStream(dict(format='vtt', language=aset["@lang"], url=repr["BaseURL"]))
-                    data["subs_streams"].append(stream)
+                    repr = aset.get("Representation")
+                    if isinstance(repr, dict) and repr.get("BaseURL"):
+                        stream = SubtitlesStream(dict(format='vtt', language=aset.get("@lang", ""), url=repr["BaseURL"]))
+                        data["subs_streams"].append(stream)
         return cls(data)
 
     @classmethod
@@ -97,11 +110,16 @@ class Manifest(Object):
         data["subs_streams"] = []
         data["content_protection"] = {}
         manifest = xmltodict.parse(obj)
-        for aset in manifest["MPD"]["Period"]["AdaptationSet"]:
+        period = manifest.get("MPD", {}).get("Period") or {}
+        for aset in _as_list(period.get("AdaptationSet")):
+            if not isinstance(aset, dict):
+                continue
             if "SegmentTemplate" in aset:
                 template = aset["SegmentTemplate"]
-                for drm in aset["ContentProtection"]:
-                    scheme_id_uri = drm["@schemeIdUri"]
+                for drm in _as_list(aset.get("ContentProtection")):
+                    if not isinstance(drm, dict):
+                        continue
+                    scheme_id_uri = drm.get("@schemeIdUri")
                     if scheme_id_uri == WIDEVINE_UUID:
                         data["content_protection"]["widevine"] = {}
                         data["content_protection"]["widevine"]["pssh"] = drm["cenc:pssh"]
@@ -109,19 +127,23 @@ class Manifest(Object):
                     if scheme_id_uri == PLAYREADY_UUID:
                         data["content_protection"]["playready"] = {}
                         data["content_protection"]["playready"]["pssh"] = drm["mspr:pro"]
-                for repr in aset["Representation"]:
-                    if repr.get("@mimeType").startswith("video"):
+                for repr in _as_list(aset.get("Representation")):
+                    if not isinstance(repr, dict):
+                        continue
+                    mime = (repr.get("@mimeType") or "")
+                    if mime.startswith("video"):
                         stream = ManifestVideoStream.parse(repr, template)
                         data["video_streams"].append(stream)
-                    elif repr.get("@mimeType").startswith("audio"):
+                    elif mime.startswith("audio"):
                         stream = ManifestAudioStream.parse(repr, template)
                         data["audio_streams"].append(stream)
             else:
-                mimeType = aset.get("@mimeType")
+                mimeType = (aset.get("@mimeType") or "")
                 if mimeType.startswith("text/vtt"):
-                    repr = aset["Representation"]
-                    stream = SubtitlesStream(dict(format='vtt', language=aset["@lang"], url=repr["BaseURL"]))
-                    data["subs_streams"].append(stream)
+                    repr = aset.get("Representation")
+                    if isinstance(repr, dict) and repr.get("BaseURL"):
+                        stream = SubtitlesStream(dict(format='vtt', language=aset.get("@lang", ""), url=repr["BaseURL"]))
+                        data["subs_streams"].append(stream)
         return cls(data)
 
 

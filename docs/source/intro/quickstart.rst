@@ -31,6 +31,13 @@ Here's a quick example code. This script will login into the account, search for
 
         asyncio.run(main())
 
+Smart Chapters and 192kbps audio
+--------------------------------
+
+**Skip events (chapters):** Use :meth:`~crunpyroll.Client.get_skip_events` with an episode id to fetch skip-events JSON from Crunchyroll's static CDN. Then use :func:`~crunpyroll.types.skip_events.build_chapter_list` on the returned :obj:`~crunpyroll.types.SkipEvents.events` to build a named chapter list (Intro, Recap, Chapter 1, Credits, etc.) with gap detection and correct ordering so that "Chapter 1" follows after Intro/Recap.
+
+**192kbps audio (dual-endpoint):** Use :meth:`~crunpyroll.Client.get_streams` with ``stream_endpoint="phone"`` or the convenience method :meth:`~crunpyroll.Client.get_streams_phone` to get streams from the phone/download endpoint, which typically provides 192kbps AAC. For dual-endpoint usage: get TV streams for video with the default ``get_streams(media_id)`` and phone streams for audio with ``get_streams_phone(media_id)``; merge manifests in your download pipeline.
+
 Enjoy the API
 -------------
 

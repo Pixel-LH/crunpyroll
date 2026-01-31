@@ -6,6 +6,7 @@ from .get_seasons import GetSeasons
 from .get_episodes import GetEpisodes
 from .get_objects import GetObjects
 from .get_streams import GetStreams
+from .get_skip_events import GetSkipEvents
 from .get_manifest import GetManifest
 from .get_license import GetLicense
 from .delete_active_stream import DeleteActiveStream
@@ -18,6 +19,7 @@ class Methods(
     GetSeasons,
     GetEpisodes,
     GetStreams,
+    GetSkipEvents,
     GetManifest,
     GetLicense,
     GetObjects,

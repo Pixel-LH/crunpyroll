@@ -14,3 +14,6 @@ class APIHost(Enum):
 
     LICENSE = "cr-license-proxy.prd.crunchyrollsvc.com"
     "SVC host used for license."
+
+    STATIC = "static.crunchyroll.com"
+    "Static CDN host, e.g. for skip-events JSON."
