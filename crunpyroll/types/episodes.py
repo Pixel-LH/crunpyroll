@@ -135,9 +135,9 @@ class Episode(Content):
         self.id: str = data.get("id")
         self.title: str = data.get("title")
         self.slug: str = data.get("slug_title")
-        print(f"episode： {data.get('episode')}, episode_number: {data.get('episode_number')}")
+        #print(f"episode： {data.get('episode')}, episode_number: {data.get('episode_number')}")
         try:
-            if data.get("episode") is not None and data.get("episode_number") != "":
+            if data.get("episode") is not None or data.get("episode_number") != "":
                 if isdigit(data.get("episode")):
                     self.episode_number: int = int(data.get("episode"))
                 else:
