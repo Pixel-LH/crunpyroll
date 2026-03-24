@@ -94,7 +94,9 @@ class Session:
                 "device_id": self._client.device_id,
                 "device_name": self._client.device_name,
                 "device_type": self._client.device_type
-            }, include_session=False
+            },
+            include_session=False,
+            allow_refresh_on_401=False
 
         )
         self.access_token = response.get("access_token")
@@ -118,7 +120,9 @@ class Session:
                 "device_id": self._client.device_id,
                 "device_name": self._client.device_name,
                 "device_type": self._client.device_type
-            }, include_session=False
+            },
+            include_session=False,
+            allow_refresh_on_401=False
         )
         self.access_token = response.get("access_token")
         self.refresh_token = response.get("refresh_token")
