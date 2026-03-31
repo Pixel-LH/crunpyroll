@@ -15,13 +15,15 @@ import crunpyroll
 class Session:
     def __init__(
         self,
-        client: "crunpyroll.Client"
+        client: "crunpyroll.Client",
+        publice_token :str = ""
     ):
         self._client: crunpyroll.Client = client
 
         self.access_token: str = None
         self.refresh_token: str = None
         self.expiration: datetime = None
+        self.publice_token = publice_token or PUBLIC_TOKEN
 
     @property
     def is_authorized(self):
@@ -40,9 +42,9 @@ class Session:
         if date >= self.expiration:
             await self.refresh()
 
-    async def get_public_token(self) -> Optional[str]:
+    async def get_public_token(self) -> str:
         
-        return PUBLIC_TOKEN
+        return self.publice_token
         
         # 1. 修正API地址拼写错误
         # api_url = "https://static.crunchyroll.com/vilos-v2/web/vilos/js/bundle.js"
@@ -81,7 +83,7 @@ class Session:
             method="POST",
             endpoint="auth/v1/token",
             headers={
-                "Authorization": f"Basic {PUBLIC_TOKEN}",
+                "Authorization": f"Basic {self.publice_token}",
                 "User-Agent": USER_AGENT,
                 "Connection": "Keep-Alive",
                 "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
@@ -111,7 +113,7 @@ class Session:
             method="POST",
             endpoint="auth/v1/token",
             headers={
-                "Authorization": f"Basic {PUBLIC_TOKEN}"
+                "Authorization": f"Basic {self.publice_token}"
             },
             payload={
                 "refresh_token": self.refresh_token,

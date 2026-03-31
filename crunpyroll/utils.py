@@ -4,7 +4,7 @@ from unittest import installHandler
 from uuid import uuid4
 import re
 
-PUBLIC_TOKEN = "bzd1b3d5N3E0bGdsdGJhdnloanE6bHFyakVUTng2Vzd1Um5wY0RtOHdSVmo4QkNoakMxZXI="
+PUBLIC_TOKEN = "eTJhcnZqYjBoMHJndnRpemxvdnk6SlZMdndkSXBYdnhVLXFJQnZUMU04b1FUcjFxbFFKWDI="
 
 APP_VERSION = "3.59.0"
 
