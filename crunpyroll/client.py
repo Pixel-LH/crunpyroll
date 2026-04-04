@@ -66,7 +66,14 @@ class Client(Object, Methods):
         self.device_type: str = device_type
         self.public_token = public_token
 
-        self.http = httpx.AsyncClient(timeout=15)
+        client_kwargs = {
+            "timeout": 15,
+            "trust_env": False,
+        }
+        if proxies:
+            client_kwargs["proxy"] = proxies
+
+        self.http = httpx.AsyncClient(**client_kwargs)
         self.session = Session(self, public_token)
 
     async def start(self):
