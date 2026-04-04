@@ -67,7 +67,7 @@ class Client(Object, Methods):
         self.public_token = public_token
 
         self.http = httpx.AsyncClient(timeout=15)
-        self.session = Session(self)
+        self.session = Session(self, public_token)
 
     async def start(self):
         if self.session.is_authorized:
