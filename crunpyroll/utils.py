@@ -11,7 +11,7 @@ APP_VERSION = "3.59.0"
 DEVICE_NAME = "iPhone"
 DEVICE_TYPE = "iPhone 14"
 DEVICE_ID = str(uuid4())
-USER_AGENT = "Crunchyroll/ANDROIDTV/3.45.0_22272 (Android 16; en-US; sdk_gphone64_x86_64)"
+USER_AGENT = "Crunchyroll/ANDROIDTV/3.59.0_22338 (Android 12; en-US; SHIELD Android TV Build/SR1A.211012.001)"
 WIDEVINE_UUID = "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
 PLAYREADY_UUID = "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95"
 

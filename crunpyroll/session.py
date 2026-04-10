@@ -6,7 +6,7 @@ from .utils import (
     PUBLIC_TOKEN, get_date,get_api_headers,USER_AGENT
 )
 
-from .errors import ClientNotAuthorized
+from .errors import ClientNotAuthorized, CrunpyrollException
 
 from typing import Optional
 
@@ -79,28 +79,32 @@ class Session:
 
     
     async def authorize(self) -> Optional[bool]:
-        response = await self._client.api_request(
-            method="POST",
-            endpoint="auth/v1/token",
-            headers={
-                "Authorization": f"Basic {self.publice_token}",
-                "User-Agent": USER_AGENT,
-                "Connection": "Keep-Alive",
-                "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-            },
-            payload={
-                "username": self._client.email,
-                "password": self._client.password,
-                "grant_type": "password",
-                "scope": "offline_access",
-                "device_id": self._client.device_id,
-                "device_name": self._client.device_name,
-                "device_type": self._client.device_type
-            },
-            include_session=False,
-            allow_refresh_on_401=False
-
-        )
+        try:
+            response = await self._client.api_request(
+                method="POST",
+                endpoint="auth/v1/token",
+                headers={
+                    "Authorization": f"Basic {self.publice_token}",
+                    "User-Agent": USER_AGENT,
+                    "Connection": "Keep-Alive",
+                    "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+                },
+                payload={
+                    "username": self._client.email,
+                    "password": self._client.password,
+                    "grant_type": "password",
+                    "scope": "offline_access",
+                    "device_id": self._client.device_id,
+                    "device_name": self._client.device_name,
+                    "device_type": self._client.device_type
+                },
+                include_session=False,
+                allow_refresh_on_401=False
+            )
+        except CrunpyrollException as exc:
+            raw_response = re.sub(r"^\[\d+\]\s*", "", str(exc), count=1)
+            print(f"Login failed raw response:\n{raw_response}")
+            raise
         self.access_token = response.get("access_token")
         self.refresh_token = response.get("refresh_token")
         self.expiration = get_date() + timedelta(
