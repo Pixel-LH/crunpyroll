@@ -4,14 +4,14 @@ from unittest import installHandler
 from uuid import uuid4
 import re
 
-PUBLIC_TOKEN = "bm1oaGcwbDZ4eXhjZm02aHQ2aGY6SjR6bU1mdjNkMVFkWHk4dDk2d1NjeDdoUnkzclBHLTM="
+PUBLIC_TOKEN = "cmpzMGx0eDBkYndrbGl3eGR6ZGY6NFY3cmYyMS1VRlhlWi01WEFkMFhfUVB3cjFndV9pMXM="
 
-APP_VERSION = "3.61.0"
+APP_VERSION = "3.65.0"
 
 DEVICE_NAME = "BRAVIA_AE2"
 DEVICE_TYPE = "ANDROIDTV"
 DEVICE_ID = str(uuid4())
-USER_AGENT = "Crunchyroll/ANDROIDTV/3.61.0_22341 (Android 12; en-US; Bravia 4K AE2)"
+USER_AGENT = "Crunchyroll/ANDROIDTV/3.65.0_22347 (Android 12; en-US; Bravia 4K AE2)"
 WIDEVINE_UUID = "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
 PLAYREADY_UUID = "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95"
 
