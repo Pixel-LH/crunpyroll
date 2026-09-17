@@ -10,12 +10,12 @@ class GetLicense:
         *,
         challenge: bytes,
         token: str,
-    ) -> str:
+    ) -> bytes:
         """
         Get DRM license. Useful to obtain decryption keys.
 
         .. todo::
-            
+
             Add support for PlayReady DRM
 
         Parameters:
@@ -27,8 +27,8 @@ class GetLicense:
                 Token of the stream.
 
         Returns:
-            ``str``:
-                On success, license is returned.
+            ``bytes``:
+                On success, raw license bytes are returned.
         """
         await self.session.retrieve()
         response = await self.api_request(
@@ -42,5 +42,6 @@ class GetLicense:
             },
             host=enums.APIHost.LICENSE,
             payload=challenge,
+            raw=True,
         )
         return response

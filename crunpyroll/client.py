@@ -111,7 +111,8 @@ class Client(Object, Methods):
         payload: Dict = None,
         include_session: bool = True,
         allow_refresh_on_401: bool = True,
-    ) -> Optional[Dict]:
+        raw: bool = False,
+    ) -> Optional[Union[Dict, bytes]]:
         if not url:
             url = "https://" + host.value + "/" + endpoint
         api_headers = get_api_headers(headers)
@@ -148,6 +149,14 @@ class Client(Object, Methods):
                 headers=refreshed_headers,
                 data=payload
             )
+        if raw:
+            # 二进制响应（如 Widevine license）不能经过 parse_response：
+            # response.json() 会先做严格 UTF-8 解码，对二进制内容抛
+            # UnicodeDecodeError，且 except 仅捕获 JSONDecodeError 接不住。
+            if response.status_code != 200:
+                message = f"[{response.status_code}] {response.text}"
+                raise CrunpyrollException(message)
+            return response.content
         return Client.parse_response(response, method=method)
     
     async def manifest_request(
