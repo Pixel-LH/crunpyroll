@@ -20,4 +20,5 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-/test/
+/test/*
+!/test/test_manifest.py

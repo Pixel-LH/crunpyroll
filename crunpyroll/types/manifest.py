@@ -1,5 +1,4 @@
 import base64
-import traceback
 from uuid import UUID
 
 from .obj import Object
@@ -11,7 +10,7 @@ from ..utils import (
     parse_segments
 )
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import xmltodict
 
@@ -23,12 +22,9 @@ def _as_list(x: Any) -> list:
     return x if isinstance(x, list) else [x]
 
 
-def _node_text(value: Any) -> Any:
-    """xmltodict 下，带内联 xmlns 声明的子元素会被解析成
-    {'@xmlns:...': ..., '#text': ...} 结构，取其文本内容。"""
-    if isinstance(value, dict):
-        return value.get("#text")
-    return value
+def _xml_text(value: Any) -> Optional[str]:
+    """Elements with namespace declarations have their value in #text."""
+    return value.get("#text") if isinstance(value, dict) else value
 
 
 def _safe_stream_parse(cls: type, repr: Dict, template: Dict) -> Any:
@@ -37,7 +33,6 @@ def _safe_stream_parse(cls: type, repr: Dict, template: Dict) -> Any:
         return cls.parse(repr, template)
     except Exception:
         return None
-
 
 def _widevine_key_id_from_pssh(pssh_b64: str) -> str | None:
     """从 widevine pssh box 中尽力解码 KID。
@@ -59,33 +54,41 @@ def _widevine_key_id_from_pssh(pssh_b64: str) -> str | None:
     return None
 
 
-def _extract_drm_info(aset: Dict, data: Dict) -> None:
-    """Parse ContentProtection nodes of an AdaptationSet into data["content_protection"].
-
-    与流格式无关：无论 AdaptationSet 使用 SegmentTemplate 还是
-    BaseURL+SegmentBase（Crunchyroll 新打包格式），DRM 节点都直接
-    挂在 AdaptationSet 下，必须无条件解析。key_id 优先取
-    @cenc:default_KID，缺失时从 widevine pssh box 中解码。
-    """
-    for drm in _as_list(aset.get("ContentProtection")):
-        if not isinstance(drm, dict):
-            continue
-        scheme_id_uri = drm.get("@schemeIdUri")
-        if scheme_id_uri == WIDEVINE_UUID:
-            widevine = data["content_protection"].setdefault("widevine", {})
-            pssh = _node_text(drm.get("cenc:pssh"))
+def _parse_content_protection(elements: Any) -> Dict:
+    elements = [item for item in _as_list(elements) if isinstance(item, dict)]
+    default_kid = next(
+        (item["@cenc:default_KID"] for item in elements if item.get("@cenc:default_KID")),
+        None,
+    )
+    protection = {}
+    for drm in elements:
+        scheme = drm.get("@schemeIdUri")
+        if scheme == WIDEVINE_UUID:
+            pssh = _xml_text(drm.get("cenc:pssh"))
+            key_id = drm.get("@cenc:default_KID") or default_kid
+            if key_id is None and pssh:
+                key_id = _widevine_key_id_from_pssh(pssh)
+            widevine = protection.setdefault("widevine", {})
             if pssh:
                 widevine["pssh"] = pssh
-            key_id = drm.get("@cenc:default_KID")
-            if not key_id and pssh:
-                key_id = _widevine_key_id_from_pssh(pssh)
             if key_id:
                 widevine["key_id"] = key_id
-        if scheme_id_uri == PLAYREADY_UUID:
-            playready = data["content_protection"].setdefault("playready", {})
-            pro = _node_text(drm.get("mspr:pro"))
+        elif scheme == PLAYREADY_UUID:
+            pro = _xml_text(drm.get("mspr:pro"))
             if pro:
-                playready["pssh"] = pro
+                protection.setdefault("playready", {})["pssh"] = pro
+    return protection
+
+
+def _parse_stream_segments(obj: Dict, template: Optional[Dict]) -> List[str]:
+    if template is not None:
+        return parse_segments(obj, template)
+    # SegmentBase indexes byte ranges in one media file. Downloading BaseURL
+    # in full includes both initialization and media without duplicating bytes.
+    base_url = obj.get("BaseURL")
+    if not base_url:
+        raise ValueError("SegmentBase representation is missing BaseURL")
+    return [base_url]
 
 
 class Manifest(Object):
@@ -119,78 +122,68 @@ class Manifest(Object):
 
     @classmethod
     def new_parse(cls, obj: str):
-        data = {}
-        data["plain"] = obj
-        data["video_streams"] = []
-        data["audio_streams"] = []
-        data["subs_streams"] = []
-        data["content_protection"] = {}
-        manifest = xmltodict.parse(obj)
-        period = manifest.get("MPD", {}).get("Period") or {}
-        for aset in _as_list(period.get("AdaptationSet")):
-            if not isinstance(aset, dict):
-                continue
-            _extract_drm_info(aset, data)
-            if "SegmentTemplate" in aset:
-                template = aset["SegmentTemplate"]
-                mime_type = aset.get("@mimeType") or aset.get("@mime_Type") or aset.get("@mime_type") or ""
-                for repr in _as_list(aset.get("Representation")):
-                    if not isinstance(repr, dict):
-                        continue
-                    if "video" in mime_type:
-                        stream = _safe_stream_parse(ManifestVideoStream, repr, template)
-                    elif "audio" in mime_type:
-                        stream = _safe_stream_parse(ManifestAudioStream, repr, template)
-                    else:
-                        continue
-                    if stream is not None:
-                        data["video_streams" if isinstance(stream, ManifestVideoStream) else "audio_streams"].append(stream)
-            else:
-                mimeType = aset.get("@mimeType") or ""
-                if mimeType.startswith("text/vtt"):
-                    repr = aset.get("Representation")
-                    if isinstance(repr, dict) and repr.get("BaseURL"):
-                        stream = SubtitlesStream(dict(format='vtt', language=aset.get("@lang", ""), url=repr["BaseURL"]))
-                        data["subs_streams"].append(stream)
-        return cls(data)
+        return cls.parse(obj)
 
     @classmethod
     def parse(cls, obj: str):
-        data = {}
-        data["plain"] = obj
-        data["video_streams"] = []
-        data["audio_streams"] = []
-        data["subs_streams"] = []
-        data["content_protection"] = {}
-        manifest = xmltodict.parse(obj)
-        period = manifest.get("MPD", {}).get("Period") or {}
-        for aset in _as_list(period.get("AdaptationSet")):
-            if not isinstance(aset, dict):
-                continue
-            _extract_drm_info(aset, data)
-            if "SegmentTemplate" in aset:
-                template = aset["SegmentTemplate"]
-                for repr in _as_list(aset.get("Representation")):
-                    if not isinstance(repr, dict):
-                        continue
-                    mime = (repr.get("@mimeType") or "")
-                    if mime.startswith("video"):
-                        stream = _safe_stream_parse(ManifestVideoStream, repr, template)
-                    elif mime.startswith("audio"):
-                        stream = _safe_stream_parse(ManifestAudioStream, repr, template)
-                    else:
-                        continue
-                    if stream is not None:
-                        data["video_streams" if isinstance(stream, ManifestVideoStream) else "audio_streams"].append(stream)
-            else:
-                mimeType = (aset.get("@mimeType") or "")
-                if mimeType.startswith("text/vtt"):
-                    repr = aset.get("Representation")
-                    if isinstance(repr, dict) and repr.get("BaseURL"):
-                        stream = SubtitlesStream(dict(format='vtt', language=aset.get("@lang", ""), url=repr["BaseURL"]))
-                        data["subs_streams"].append(stream)
-        return cls(data)
+        return cls._parse(obj)
 
+    @classmethod
+    def _parse(cls, obj: str):
+        data = {
+            "plain": obj,
+            "video_streams": [],
+            "audio_streams": [],
+            "subs_streams": [],
+            "content_protection": {},
+        }
+        manifest = xmltodict.parse(obj)
+        for period in _as_list(manifest.get("MPD", {}).get("Period")):
+            for aset in _as_list(period.get("AdaptationSet")):
+                if not isinstance(aset, dict):
+                    continue
+                # DRM belongs to the adaptation, regardless of segment layout.
+                protection = _parse_content_protection(aset.get("ContentProtection"))
+                for system, metadata in protection.items():
+                    data["content_protection"].setdefault(system, {}).update(metadata)
+                mime_type = (
+                    aset.get("@mimeType") or aset.get("@mime_Type")
+                    or aset.get("@mime_type") or ""
+                )
+                for representation in _as_list(aset.get("Representation")):
+                    if not isinstance(representation, dict):
+                        continue
+                    representation = dict(representation)
+                    base_url = _xml_text(
+                        representation.get("BaseURL") or aset.get("BaseURL")
+                    )
+                    if base_url is not None:
+                        representation["BaseURL"] = base_url
+                    mime = representation.get("@mimeType") or mime_type
+                    template = representation.get(
+                        "SegmentTemplate", aset.get("SegmentTemplate")
+                    )
+                    segment_base = representation.get("SegmentBase", aset.get("SegmentBase"))
+                    if mime.startswith("video") or mime.startswith("audio"):
+                        if template is None and segment_base is None:
+                            continue
+                        stream_type = (
+                            ManifestVideoStream if mime.startswith("video")
+                            else ManifestAudioStream
+                        )
+                        if template is not None:
+                            stream = _safe_stream_parse(stream_type, representation, template)
+                        else:
+                            stream = stream_type.parse(representation, template)
+                        if stream is not None:
+                            target = "video_streams" if mime.startswith("video") else "audio_streams"
+                            data[target].append(stream)
+                    elif mime.startswith("text/vtt") and base_url:
+                        data["subs_streams"].append(SubtitlesStream({
+                            "format": "vtt", "language": aset.get("@lang", ""),
+                            "url": base_url,
+                        }))
+        return cls(data)
 
 
 
@@ -212,7 +205,8 @@ class ManifestVideoStream(Object):
             Bitrate of the video stream.
 
         segments (List of ``str``):
-            Each segment URL of the video stream.
+            Each segment URL of the video stream. For SegmentBase manifests,
+            contains the single complete media file URL, including initialization.
     """
 
     def __init__(self, data: Dict):
@@ -223,13 +217,13 @@ class ManifestVideoStream(Object):
         self.segments: List[str] = data.get("segments")
 
     @classmethod
-    def parse(cls, obj: Dict, template: Dict):
+    def parse(cls, obj: Dict, template: Optional[Dict]):
         data = {}
         data["codecs"] = obj["@codecs"]
         data["width"] = int(obj["@width"])
         data["height"] = int(obj["@height"])
         data["bitrate"] = int(obj["@bandwidth"])
-        data["segments"] = parse_segments(obj, template)
+        data["segments"] = _parse_stream_segments(obj, template)
         return cls(data)
 
 
@@ -245,7 +239,8 @@ class ManifestAudioStream(Object):
             Bitrate of the audio stream.
 
         segments (List of ``str``):
-            Each segment URL of the audio stream.
+            Each segment URL of the audio stream. For SegmentBase manifests,
+            contains the single complete media file URL, including initialization.
     """
 
     def __init__(self, data: Dict):
@@ -254,9 +249,9 @@ class ManifestAudioStream(Object):
         self.segments: List[str] = data.get("segments")
 
     @classmethod
-    def parse(cls, obj: Dict, template: Dict):
+    def parse(cls, obj: Dict, template: Optional[Dict]):
         data = {}
         data["codecs"] = obj["@codecs"]
         data["bitrate"] = int(obj["@bandwidth"])
-        data["segments"] = parse_segments(obj, template)
+        data["segments"] = _parse_stream_segments(obj, template)
         return cls(data)

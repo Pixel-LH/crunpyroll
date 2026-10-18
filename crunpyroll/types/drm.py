@@ -6,14 +6,16 @@ class DRM(Object):
     Info about DRM.
 
     Parameters:
-        key_id (``str``)
+        key_id (``str``, optional):
+            None when absent from the manifest.
 
-        pssh (``str``)
+        pssh (``str``, optional):
+            None when absent from the manifest.
     """
     def __init__(self, data: Optional[Dict]):
         data = data or {}
-        self.key_id: str = data.get("key_id")
-        self.pssh: str = data.get("pssh")
+        self.key_id: Optional[str] = data.get("key_id")
+        self.pssh: Optional[str] = data.get("pssh")
 
 class ContentProtection(Object):
     """
@@ -21,10 +23,10 @@ class ContentProtection(Object):
 
     Parameters:
         widevine (:obj:`~crunpyroll.types.DRM`):
-            Info about Widevine DRM.
+            Info about Widevine DRM. Fields are None when not present.
 
         playready (:obj:`~crunpyroll.types.DRM`):
-            Info about PlayReady DRM.
+            Info about PlayReady DRM. Fields are None when not present.
     """
     def __init__(self, data: Optional[Dict]):
         data = data or {}
